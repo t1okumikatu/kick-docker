@@ -1,0 +1,13 @@
+streams:
+  camera0: ffmpeg:device?video=/dev/video0&input_format=mjpeg&video_size=1280x720#video=h264
+  camera1: ffmpeg:device?video=/dev/video1&input_format=mjpeg&video_size=1280x720#video=h264
+  camera2: ffmpeg:device?video=/dev/video2&input_format=mjpeg&video_size=1280x720#video=h264
+  camera3: ffmpeg:device?video=/dev/video3&input_format=mjpeg&video_size=1280x720#video=h264
+
+webrtc:
+  # サーバーのIPアドレスを固定してWebRTCを助ける
+  candidates:
+    - 100.124.195.2:8555
+    - $(hostname -I | cut -d' ' -f1):8555
+  ice_servers:
+    - urls: [ "stun:stun.l.google.com:19302" ]

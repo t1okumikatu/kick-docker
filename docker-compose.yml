@@ -1,0 +1,55 @@
+services:
+  # 1. Tailscaleコンテナ（ネットワークの玄関口）
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: avatar1-docker
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+      # 認証キーが必要な場合はここに追加
+      # - TS_AUTHKEY=tskey-auth-xxxxxxxxxxxx
+    volumes:
+      - ./tailscale_state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    # 外部（手元のPC）からアクセスしたいポートはすべてここで公開する
+    ports:
+      - "1984:1984"       # go2rtc 管理画面 (WebUI)
+      - "8554:8554"       # RTSP ストリーミング
+      - "8555:8555/tcp"   # WebRTC (TCP)
+      - "8555:8555/udp"   # WebRTC (UDP)
+      - "8080:8080"       # 簡易HTTPサーバー用
+    restart: unless-stopped
+
+  # 2. go2rtcコンテナ（リアルタイム動画配信）
+  go2rtc:
+    image: alexxit/go2rtc
+    network_mode: "service:tailscale" # Tailscaleのネットワークを共有
+    depends_on:
+      - tailscale
+    volumes:
+      - ./go2rtc.yaml:/config/go2rtc.yaml
+    devices:
+      - "/dev/video0:/dev/video0"
+      - "/dev/video1:/dev/video1"
+      - "/dev/video2:/dev/video2"
+      - "/dev/video3:/dev/video3"
+    restart: unless-stopped
+
+  # 3. アプリコンテナ（画像解析やPython実行用）
+  app:
+    image: ubuntu:22.04
+    network_mode: "service:tailscale" # Tailscaleのネットワークを共有
+    depends_on:
+      - tailscale
+    tty: true
+    working_dir: /app
+    volumes:
+      - .:/app # カレントディレクトリを共有（保存した写真が外から見える）
+    devices:
+      - "/dev/video0:/dev/video0"
+      - "/dev/video1:/dev/video1"
+      - "/dev/video2:/dev/video2"
+      - "/dev/video3:/dev/video3"
+    restart: unless-stopped
